@@ -27,14 +27,8 @@ local function P()
 	pcall(function() local r = game:GetService("CoreGui"):FindFirstChild("Discord") if r then r:Destroy() end end)
 	return sk
 end
-local function F()
-	local e = (getgenv and getgenv()) or _G
-	local k = tostring(e["key"] or e["W8rldisyours219Key"] or ""):gsub("^%s+", ""):gsub("%s+$", "")
-	if k == "" then
-		k = P()
-		assert(k, "[W8rldisyours219] Set getgenv().key = \"YOUR-KEY\" before running this loader.")
-		e["key"] = k
-	end
+local KF = "w8rldisyours219_key.txt"
+local function W(k)
 	local hw = H()
 	local oe, p = pcall(function() return game:GetService("HttpService"):JSONEncode({ key = k, hwid = hw }) end)
 	assert(oe, "[W8rldisyours219] Failed to build the license request")
@@ -65,7 +59,34 @@ local function F()
 			end
 		end
 	end
+	return rb, le
+end
+local function F()
+	local e = (getgenv and getgenv()) or _G
+	local k = tostring(e["key"] or e["W8rldisyours219Key"] or ""):gsub("^%s+", ""):gsub("%s+$", "")
+	local cached = false
+	if k == "" and isfile and readfile then
+		local ok, saved = pcall(function() return isfile(KF) and readfile(KF) or "" end)
+		if ok and tostring(saved or "") ~= "" then
+			k = tostring(saved):gsub("^%s+", ""):gsub("%s+$", "")
+			cached = true
+		end
+	end
+	if k == "" then
+		k = P()
+		assert(k, "[W8rldisyours219] Set getgenv().key = \"YOUR-KEY\" before running this loader.")
+	end
+	e["key"] = k
+	local rb, le = W(k)
+	if not rb and cached then
+		if deletefile then pcall(deletefile, KF) end
+		k = P()
+		assert(k, "[W8rldisyours219] Saved key was rejected (" .. tostring(le) .. "); set getgenv().key = \"YOUR-KEY\" and rerun.")
+		e["key"] = k
+		rb, le = W(k)
+	end
 	assert(rb, "[W8rldisyours219] License check failed: " .. tostring(le))
+	if writefile then pcall(writefile, KF, k) end
 	return rb
 end
 local ok, source = pcall(F)
