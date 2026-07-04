@@ -1,14 +1,6 @@
 -- Public-facing loader. Contains no game logic — safe to distribute freely.
--- Buyers set getgenv().key before running this.
---
--- EDIT THIS before distributing: your tunneled key-server URL (the SAME
--- value as KEY_SERVER_URL in W8rldisyours219.lua's checkLicenseKey()).
+-- Buyers set getgenv().key before running this, or enter it in the prompt.
 local KEY_SERVER_URL = "https://keys.w8rldisyours.com"
-
--- Only used while KEY_SERVER_URL is blank (local development before you've
--- deployed the key server) — points at your own repo. Make that repo
--- PRIVATE once you release publicly; this fallback then only works for you.
-local DEV_SOURCE_URL = "https://raw.githubusercontent.com/W8rldisyours219/gag-stock-weather-executor/main/W8rldisyours219.lua"
 
 assert(type(loadstring) == "function", "[W8rldisyours219] loadstring is not available in this executor")
 
@@ -28,74 +20,35 @@ local function encodeQueryValue(value)
 	end)
 end
 
+-- Reuses the same Discord UI Lib as the main script so the key prompt
+-- matches its look. Falls back to a plain assert if the lib can't load.
 local function promptForKey()
-	local player = game:GetService("Players").LocalPlayer
-	local gui = Instance.new("ScreenGui")
-	gui.Name = "W8rldisyours219KeyPrompt"
-	gui.ResetOnSpawn = false
-	gui.DisplayOrder = 999
-	local parented = pcall(function()
-		gui.Parent = game:GetService("CoreGui")
+	local ok, source = pcall(function()
+		return game:HttpGet("https://raw.githubusercontent.com/GhostDuckyy/UI-Libraries/main/Discord%20Ui%20Lib/source.lua")
 	end)
-	if not parented then
-		gui.Parent = player:WaitForChild("PlayerGui")
+	if not ok or type(source) ~= "string" or #source < 200 then
+		return nil
 	end
 
-	local frame = Instance.new("Frame")
-	frame.Size = UDim2.fromOffset(320, 150)
-	frame.Position = UDim2.new(0.5, -160, 0.5, -75)
-	frame.BackgroundColor3 = Color3.fromRGB(30, 30, 34)
-	frame.BorderSizePixel = 0
-	frame.Parent = gui
-	Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+	local chunk = loadstring(source)
+	if not chunk then
+		return nil
+	end
 
-	local title = Instance.new("TextLabel")
-	title.Size = UDim2.new(1, -20, 0, 30)
-	title.Position = UDim2.fromOffset(10, 10)
-	title.BackgroundTransparency = 1
-	title.Text = "W8rldisyours219 — Enter License Key"
-	title.TextColor3 = Color3.fromRGB(240, 240, 240)
-	title.Font = Enum.Font.GothamBold
-	title.TextSize = 16
-	title.TextXAlignment = Enum.TextXAlignment.Left
-	title.Parent = frame
+	local libOk, lib = pcall(chunk)
+	if not libOk or not lib then
+		return nil
+	end
 
-	local box = Instance.new("TextBox")
-	box.Size = UDim2.new(1, -20, 0, 36)
-	box.Position = UDim2.fromOffset(10, 50)
-	box.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
-	box.TextColor3 = Color3.fromRGB(255, 255, 255)
-	box.PlaceholderText = "XXXXX-XXXXX-XXXXX-XXXXX"
-	box.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
-	box.Text = ""
-	box.Font = Enum.Font.Gotham
-	box.TextSize = 14
-	box.ClearTextOnFocus = false
-	box.Parent = frame
-	Instance.new("UICorner", box).CornerRadius = UDim.new(0, 6)
+	local window = lib:Window("W8rldisyours219")
+	local server = window:Server("License", "")
+	local channel = server:Channel("enter-key")
 
-	local button = Instance.new("TextButton")
-	button.Size = UDim2.new(1, -20, 0, 36)
-	button.Position = UDim2.fromOffset(10, 96)
-	button.BackgroundColor3 = Color3.fromRGB(70, 130, 220)
-	button.TextColor3 = Color3.fromRGB(255, 255, 255)
-	button.Text = "Submit"
-	button.Font = Enum.Font.GothamBold
-	button.TextSize = 15
-	button.Parent = frame
-	Instance.new("UICorner", button).CornerRadius = UDim.new(0, 6)
-
-	local submittedKey = nil
-	local function submit()
-		local text = box.Text:gsub("^%s+", ""):gsub("%s+$", "")
+	local submittedKey
+	channel:Textbox("License Key", "XXXXX-XXXXX-XXXXX-XXXXX", false, function(text)
+		text = tostring(text or ""):gsub("^%s+", ""):gsub("%s+$", "")
 		if text ~= "" then
 			submittedKey = text
-		end
-	end
-	button.MouseButton1Click:Connect(submit)
-	box.FocusLost:Connect(function(enterPressed)
-		if enterPressed then
-			submit()
 		end
 	end)
 
@@ -103,7 +56,14 @@ local function promptForKey()
 	while not submittedKey do
 		wait(0.1)
 	end
-	gui:Destroy()
+
+	pcall(function()
+		local root = game:GetService("CoreGui"):FindFirstChild("Discord")
+		if root then
+			root:Destroy()
+		end
+	end)
+
 	return submittedKey
 end
 
@@ -112,6 +72,7 @@ local function fetchGatedSource()
 	local key = tostring(env["key"] or env["W8rldisyours219Key"] or ""):gsub("^%s+", ""):gsub("%s+$", "")
 	if key == "" then
 		key = promptForKey()
+		assert(key, "[W8rldisyours219] Set getgenv().key = \"YOUR-KEY\" before running this loader.")
 		env["key"] = key
 	end
 
@@ -170,17 +131,8 @@ local function fetchGatedSource()
 	return responseBody
 end
 
-local ok, source
-if KEY_SERVER_URL ~= "" then
-	ok, source = pcall(fetchGatedSource)
-	assert(ok, tostring(source))
-else
-	ok, source = pcall(function()
-		return game:HttpGet(DEV_SOURCE_URL)
-	end)
-	assert(ok, "[W8rldisyours219] HttpGet failed: " .. tostring(source))
-end
-
+local ok, source = pcall(fetchGatedSource)
+assert(ok, tostring(source))
 assert(type(source) == "string" and source ~= "", "[W8rldisyours219] Empty script source received")
 
 local chunk, compileError = loadstring(source)
