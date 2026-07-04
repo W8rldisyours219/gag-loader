@@ -28,10 +28,92 @@ local function encodeQueryValue(value)
 	end)
 end
 
+local function promptForKey()
+	local player = game:GetService("Players").LocalPlayer
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "W8rldisyours219KeyPrompt"
+	gui.ResetOnSpawn = false
+	gui.DisplayOrder = 999
+	local parented = pcall(function()
+		gui.Parent = game:GetService("CoreGui")
+	end)
+	if not parented then
+		gui.Parent = player:WaitForChild("PlayerGui")
+	end
+
+	local frame = Instance.new("Frame")
+	frame.Size = UDim2.fromOffset(320, 150)
+	frame.Position = UDim2.new(0.5, -160, 0.5, -75)
+	frame.BackgroundColor3 = Color3.fromRGB(30, 30, 34)
+	frame.BorderSizePixel = 0
+	frame.Parent = gui
+	Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+
+	local title = Instance.new("TextLabel")
+	title.Size = UDim2.new(1, -20, 0, 30)
+	title.Position = UDim2.fromOffset(10, 10)
+	title.BackgroundTransparency = 1
+	title.Text = "W8rldisyours219 — Enter License Key"
+	title.TextColor3 = Color3.fromRGB(240, 240, 240)
+	title.Font = Enum.Font.GothamBold
+	title.TextSize = 16
+	title.TextXAlignment = Enum.TextXAlignment.Left
+	title.Parent = frame
+
+	local box = Instance.new("TextBox")
+	box.Size = UDim2.new(1, -20, 0, 36)
+	box.Position = UDim2.fromOffset(10, 50)
+	box.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+	box.TextColor3 = Color3.fromRGB(255, 255, 255)
+	box.PlaceholderText = "XXXXX-XXXXX-XXXXX-XXXXX"
+	box.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+	box.Text = ""
+	box.Font = Enum.Font.Gotham
+	box.TextSize = 14
+	box.ClearTextOnFocus = false
+	box.Parent = frame
+	Instance.new("UICorner", box).CornerRadius = UDim.new(0, 6)
+
+	local button = Instance.new("TextButton")
+	button.Size = UDim2.new(1, -20, 0, 36)
+	button.Position = UDim2.fromOffset(10, 96)
+	button.BackgroundColor3 = Color3.fromRGB(70, 130, 220)
+	button.TextColor3 = Color3.fromRGB(255, 255, 255)
+	button.Text = "Submit"
+	button.Font = Enum.Font.GothamBold
+	button.TextSize = 15
+	button.Parent = frame
+	Instance.new("UICorner", button).CornerRadius = UDim.new(0, 6)
+
+	local submittedKey = nil
+	local function submit()
+		local text = box.Text:gsub("^%s+", ""):gsub("%s+$", "")
+		if text ~= "" then
+			submittedKey = text
+		end
+	end
+	button.MouseButton1Click:Connect(submit)
+	box.FocusLost:Connect(function(enterPressed)
+		if enterPressed then
+			submit()
+		end
+	end)
+
+	local wait = (task and task.wait) or wait
+	while not submittedKey do
+		wait(0.1)
+	end
+	gui:Destroy()
+	return submittedKey
+end
+
 local function fetchGatedSource()
 	local env = (getgenv and getgenv()) or _G
 	local key = tostring(env["key"] or env["W8rldisyours219Key"] or ""):gsub("^%s+", ""):gsub("%s+$", "")
-	assert(key ~= "", "[W8rldisyours219] Set getgenv().key = \"YOUR-KEY\" before running this loader.")
+	if key == "" then
+		key = promptForKey()
+		env["key"] = key
+	end
 
 	local hwid = computeHwid()
 	local okEncode, payload = pcall(function()
