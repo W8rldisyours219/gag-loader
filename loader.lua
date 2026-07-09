@@ -9,7 +9,10 @@ local function Q(v)
 end
 local function W(k)
 	local hw = H()
-	local oe, p = pcall(function() return game:GetService("HttpService"):JSONEncode({ key = k, hwid = hw }) end)
+	-- placeId lets the key server route to the right per-game build. Omitted
+	-- => server serves its default build, so this stays backward-compatible.
+	local pid = tostring((game and game.PlaceId) or "")
+	local oe, p = pcall(function() return game:GetService("HttpService"):JSONEncode({ key = k, hwid = hw, placeId = pid }) end)
 	assert(oe, "[W8rldisyours219] Failed to build the license request")
 	local rb, le = nil, "no reachable key server"
 	local rf = (syn and syn.request) or (http and http.request) or http_request or request or (fluxus and fluxus.request)
