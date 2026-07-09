@@ -7,27 +7,6 @@ end
 local function Q(v)
 	return tostring(v or ""):gsub("([^%w%-_%.~])", function(c) return string.format("%%%02X", string.byte(c)) end)
 end
-local function P()
-	local o, s = pcall(function() return game:HttpGet("https://raw.githubusercontent.com/GhostDuckyy/UI-Libraries/main/Discord%20Ui%20Lib/source.lua") end)
-	if not o or type(s) ~= "string" or #s < 200 then return nil end
-	local c = loadstring(s)
-	if not c then return nil end
-	local lo, l = pcall(c)
-	if not lo or not l then return nil end
-	local w = l:Window("W8rldisyours219")
-	local sv = w:Server("License", "")
-	local ch = sv:Channel("enter-key")
-	local sk
-	ch:Textbox("License Key", "XXXXX-XXXXX-XXXXX-XXXXX", false, function(t)
-		t = tostring(t or ""):gsub("^%s+", ""):gsub("%s+$", "")
-		if t ~= "" then sk = t end
-	end)
-	local wt = (task and task.wait) or wait
-	while not sk do wt(0.1) end
-	pcall(function() local r = game:GetService("CoreGui"):FindFirstChild("Discord") if r then r:Destroy() end end)
-	return sk
-end
-local KF = "w8rldisyours219_key.txt"
 local function W(k)
 	local hw = H()
 	local oe, p = pcall(function() return game:GetService("HttpService"):JSONEncode({ key = k, hwid = hw }) end)
@@ -62,31 +41,15 @@ local function W(k)
 	return rb, le
 end
 local function F()
+	-- The ONLY accepted way to supply a key is getgenv().key (the legacy
+	-- W8rldisyours219Key alias still works). No in-game prompt UI, no cached
+	-- key file — if it isn't set, the loader stops with a clear message.
 	local e = (getgenv and getgenv()) or _G
 	local k = tostring(e["key"] or e["W8rldisyours219Key"] or ""):gsub("^%s+", ""):gsub("%s+$", "")
-	local cached = false
-	if k == "" and isfile and readfile then
-		local ok, saved = pcall(function() return isfile(KF) and readfile(KF) or "" end)
-		if ok and tostring(saved or "") ~= "" then
-			k = tostring(saved):gsub("^%s+", ""):gsub("%s+$", "")
-			cached = true
-		end
-	end
-	if k == "" then
-		k = P()
-		assert(k, "[W8rldisyours219] Set getgenv().key = \"YOUR-KEY\" before running this loader.")
-	end
+	assert(k ~= "", "[W8rldisyours219] No key set. Run:  getgenv().key = \"YOUR-KEY\"  before this loader.")
 	e["key"] = k
 	local rb, le = W(k)
-	if not rb and cached then
-		if deletefile then pcall(deletefile, KF) end
-		k = P()
-		assert(k, "[W8rldisyours219] Saved key was rejected (" .. tostring(le) .. "); set getgenv().key = \"YOUR-KEY\" and rerun.")
-		e["key"] = k
-		rb, le = W(k)
-	end
 	assert(rb, "[W8rldisyours219] License check failed: " .. tostring(le))
-	if writefile then pcall(writefile, KF, k) end
 	return rb
 end
 local ok, source = pcall(F)
